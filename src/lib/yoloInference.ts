@@ -1,4 +1,3 @@
-import * as ort from 'onnxruntime-web';
 import { Detection, ModelConfig, InferenceResult } from '@/types/detection';
 
 // Default configuration - update classNames when you add your model
@@ -8,11 +7,21 @@ const DEFAULT_CONFIG: ModelConfig = {
   confidenceThreshold: 0.4,
   iouThreshold: 0.45,
   // Update these class names to match your trained model
-  classNames: ['CRACK', 'RUSTY_SCREW', 'MISSING_SCREW', 'SEALANT'], // Placeholder - replace with your actual class names
+  classNames: ['CRACK', 'RUSTY_SCREW', 'MISSING_SCREW', 'SEALANT'],
 };
 
+// Dynamically import onnxruntime-web only on client side
+let ort: typeof import('onnxruntime-web') | null = null;
+
+async function getOrt() {
+  if (!ort) {
+    ort = await import('onnxruntime-web');
+  }
+  return ort;
+}
+
 export class YOLOInference {
-  private session: ort.InferenceSession | null = null;
+  private session: import('onnxruntime-web').InferenceSession | null = null;
   private config: ModelConfig;
   private isLoading = false;
 
@@ -25,11 +34,13 @@ export class YOLOInference {
 
     this.isLoading = true;
     try {
+      const ortModule = await getOrt();
+      
       // Configure ONNX Runtime for WebGL/WASM execution
-      ort.env.wasm.numThreads = 4;
-      ort.env.wasm.simd = true;
+      ortModule.env.wasm.numThreads = 4;
+      ortModule.env.wasm.simd = true;
 
-      this.session = await ort.InferenceSession.create(this.config.modelPath, {
+      this.session = await ortModule.InferenceSession.create(this.config.modelPath, {
         executionProviders: ['webgl', 'wasm'],
         graphOptimizationLevel: 'all',
       });
@@ -48,13 +59,14 @@ export class YOLOInference {
       throw new Error('Model not loaded. Call loadModel() first.');
     }
 
+    const ortModule = await getOrt();
     const startTime = performance.now();
 
     // Preprocess image
-    const input = this.preprocess(imageData);
+    const input = this.preprocess(imageData, ortModule);
 
     // Run inference
-    const feeds: Record<string, ort.Tensor> = {
+    const feeds: Record<string, import('onnxruntime-web').Tensor> = {
       images: input, // Adjust input name if your model uses different name
     };
 
@@ -76,7 +88,7 @@ export class YOLOInference {
     return { detections, inferenceTime };
   }
 
-  private preprocess(imageData: ImageData): ort.Tensor {
+  private preprocess(imageData: ImageData, ortModule: typeof import('onnxruntime-web')): import('onnxruntime-web').Tensor {
     const { inputSize } = this.config;
     const { data, width, height } = imageData;
 
@@ -112,7 +124,7 @@ export class YOLOInference {
       float32Data[2 * inputSize * inputSize + i] = resizedData[pixelIndex + 2] / 255.0; // B
     }
 
-    return new ort.Tensor('float32', float32Data, [1, 3, inputSize, inputSize]);
+    return new ortModule.Tensor('float32', float32Data, [1, 3, inputSize, inputSize]);
   }
 
   private postprocess(
