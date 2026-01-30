@@ -11,8 +11,7 @@
   "dependencies": {
     "next": "14.2.29",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "onnxruntime-web": "^1.17.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
@@ -23,7 +22,6 @@
     "postcss": "^8.4.38",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.29",
-    "null-loader": "^4.0.1"
+    "eslint-config-next": "14.2.29"
   }
 }

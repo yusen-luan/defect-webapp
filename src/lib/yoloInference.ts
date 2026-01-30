@@ -10,18 +10,38 @@ const DEFAULT_CONFIG: ModelConfig = {
   classNames: ['CRACK', 'RUSTY_SCREW', 'MISSING_SCREW', 'SEALANT'],
 };
 
-// Dynamically import onnxruntime-web only on client side
-let ort: typeof import('onnxruntime-web') | null = null;
-
-async function getOrt() {
-  if (!ort) {
-    ort = await import('onnxruntime-web');
+// ONNX Runtime loaded from CDN
+declare global {
+  interface Window {
+    ort: typeof import('onnxruntime-web');
   }
-  return ort;
+}
+
+// Load ONNX Runtime from CDN
+async function loadOnnxRuntime(): Promise<typeof import('onnxruntime-web')> {
+  if (typeof window !== 'undefined' && window.ort) {
+    return window.ort;
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js';
+    script.async = true;
+    script.onload = () => {
+      if (window.ort) {
+        resolve(window.ort);
+      } else {
+        reject(new Error('ONNX Runtime failed to load'));
+      }
+    };
+    script.onerror = () => reject(new Error('Failed to load ONNX Runtime from CDN'));
+    document.head.appendChild(script);
+  });
 }
 
 export class YOLOInference {
-  private session: import('onnxruntime-web').InferenceSession | null = null;
+  private session: any = null;
+  private ort: typeof import('onnxruntime-web') | null = null;
   private config: ModelConfig;
   private isLoading = false;
 
@@ -34,13 +54,14 @@ export class YOLOInference {
 
     this.isLoading = true;
     try {
-      const ortModule = await getOrt();
-      
-      // Configure ONNX Runtime for WebGL/WASM execution
-      ortModule.env.wasm.numThreads = 4;
-      ortModule.env.wasm.simd = true;
+      // Load ONNX Runtime from CDN
+      this.ort = await loadOnnxRuntime();
 
-      this.session = await ortModule.InferenceSession.create(this.config.modelPath, {
+      // Configure ONNX Runtime for WebGL/WASM execution
+      this.ort.env.wasm.numThreads = 1; // Use single thread for better compatibility
+      this.ort.env.wasm.simd = true;
+
+      this.session = await this.ort.InferenceSession.create(this.config.modelPath, {
         executionProviders: ['webgl', 'wasm'],
         graphOptimizationLevel: 'all',
       });
@@ -55,18 +76,17 @@ export class YOLOInference {
   }
 
   async detect(imageData: ImageData): Promise<InferenceResult> {
-    if (!this.session) {
+    if (!this.session || !this.ort) {
       throw new Error('Model not loaded. Call loadModel() first.');
     }
 
-    const ortModule = await getOrt();
     const startTime = performance.now();
 
     // Preprocess image
-    const input = this.preprocess(imageData, ortModule);
+    const input = this.preprocess(imageData);
 
     // Run inference
-    const feeds: Record<string, import('onnxruntime-web').Tensor> = {
+    const feeds: Record<string, any> = {
       images: input, // Adjust input name if your model uses different name
     };
 
@@ -74,7 +94,7 @@ export class YOLOInference {
 
     // Get output tensor (adjust output name based on your model)
     const output = results[Object.keys(results)[0]];
-    
+
     // Postprocess results
     const detections = this.postprocess(
       output.data as Float32Array,
@@ -88,7 +108,9 @@ export class YOLOInference {
     return { detections, inferenceTime };
   }
 
-  private preprocess(imageData: ImageData, ortModule: typeof import('onnxruntime-web')): import('onnxruntime-web').Tensor {
+  private preprocess(imageData: ImageData): any {
+    if (!this.ort) throw new Error('ONNX Runtime not loaded');
+
     const { inputSize } = this.config;
     const { data, width, height } = imageData;
 
@@ -124,7 +146,7 @@ export class YOLOInference {
       float32Data[2 * inputSize * inputSize + i] = resizedData[pixelIndex + 2] / 255.0; // B
     }
 
-    return new ortModule.Tensor('float32', float32Data, [1, 3, inputSize, inputSize]);
+    return new this.ort.Tensor('float32', float32Data, [1, 3, inputSize, inputSize]);
   }
 
   private postprocess(
