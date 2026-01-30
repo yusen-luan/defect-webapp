@@ -78,19 +78,30 @@ export class YOLOInference {
 
     this.isLoading = true;
     try {
-      // Load ONNX Runtime from CDN
-      this.ort = await loadOnnxRuntime();
+      // Step 1: Load ONNX Runtime from CDN
+      console.log('Loading ONNX Runtime from CDN...');
+      try {
+        this.ort = await loadOnnxRuntime();
+        console.log('ONNX Runtime loaded successfully');
+      } catch (cdnError) {
+        throw new Error(`CDN load failed: ${cdnError instanceof Error ? cdnError.message : cdnError}`);
+      }
 
-      // Configure ONNX Runtime for WebGL/WASM execution
+      // Step 2: Configure ONNX Runtime for WebGL/WASM execution
       this.ort.env.wasm.numThreads = 1; // Use single thread for better compatibility
       this.ort.env.wasm.simd = true;
 
-      this.session = await this.ort.InferenceSession.create(this.config.modelPath, {
-        executionProviders: ['webgl', 'wasm'],
-        graphOptimizationLevel: 'all',
-      });
-
-      console.log('YOLO model loaded successfully');
+      // Step 3: Load the model file
+      console.log(`Loading model from ${this.config.modelPath}...`);
+      try {
+        this.session = await this.ort.InferenceSession.create(this.config.modelPath, {
+          executionProviders: ['wasm'], // Use WASM only for better compatibility
+          graphOptimizationLevel: 'all',
+        });
+        console.log('YOLO model loaded successfully');
+      } catch (modelError) {
+        throw new Error(`Model load failed: ${modelError instanceof Error ? modelError.message : modelError}`);
+      }
     } catch (error) {
       console.error('Failed to load YOLO model:', error);
       throw error;

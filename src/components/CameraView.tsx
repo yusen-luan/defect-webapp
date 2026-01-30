@@ -18,6 +18,7 @@ export function CameraView() {
   const [detections, setDetections] = useState<Detection[]>([]);
   const [fps, setFps] = useState<number>(0);
   const [modelLoaded, setModelLoaded] = useState(false);
+  const [modelError, setModelError] = useState<string>('');
 
   // Initialize camera
   const initCamera = useCallback(async () => {
@@ -59,11 +60,13 @@ export function CameraView() {
       inferenceRef.current = new YOLOInference();
       await inferenceRef.current.loadModel();
       setModelLoaded(true);
+      setModelError('');
       return true;
     } catch (error) {
       console.error('Model loading error:', error);
       // Don't set error status - allow camera to work without model
       setModelLoaded(false);
+      setModelError(error instanceof Error ? error.message : String(error));
       return false;
     }
   }, []);
@@ -200,8 +203,8 @@ export function CameraView() {
       )}
 
       {status === 'ready' && !modelLoaded && (
-        <div className="status-indicator status-loading">
-          Model not loaded - add model.onnx to /public/models/
+        <div className="status-indicator status-error">
+          {modelError ? `Model error: ${modelError}` : 'Model not loaded - add best.onnx to /public/models/'}
         </div>
       )}
 

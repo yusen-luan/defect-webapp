@@ -1,23 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Allow loading ONNX model files with required headers for SharedArrayBuffer
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin',
-          },
-          {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'credentialless',
-          },
-        ],
-      },
-    ];
-  },
+  // No special headers needed - we use single-threaded WASM
+  // which doesn't require SharedArrayBuffer/COOP/COEP
 };
 
 module.exports = nextConfig;
