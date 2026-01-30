@@ -10,15 +10,39 @@ const DEFAULT_CONFIG: ModelConfig = {
   classNames: ['CRACK', 'RUSTY_SCREW', 'MISSING_SCREW', 'SEALANT'],
 };
 
-// ONNX Runtime loaded from CDN
+// Minimal type definitions for ONNX Runtime Web (loaded from CDN)
+interface OrtTensor {
+  data: Float32Array | Int32Array | Uint8Array;
+  dims: readonly number[];
+}
+
+interface OrtInferenceSession {
+  run(feeds: Record<string, OrtTensor>): Promise<Record<string, OrtTensor>>;
+}
+
+interface OrtEnv {
+  wasm: {
+    numThreads: number;
+    simd: boolean;
+  };
+}
+
+interface OrtRuntime {
+  env: OrtEnv;
+  InferenceSession: {
+    create(path: string, options?: Record<string, unknown>): Promise<OrtInferenceSession>;
+  };
+  Tensor: new (type: string, data: Float32Array, dims: number[]) => OrtTensor;
+}
+
 declare global {
   interface Window {
-    ort: typeof import('onnxruntime-web');
+    ort: OrtRuntime;
   }
 }
 
 // Load ONNX Runtime from CDN
-async function loadOnnxRuntime(): Promise<typeof import('onnxruntime-web')> {
+async function loadOnnxRuntime(): Promise<OrtRuntime> {
   if (typeof window !== 'undefined' && window.ort) {
     return window.ort;
   }
@@ -40,8 +64,8 @@ async function loadOnnxRuntime(): Promise<typeof import('onnxruntime-web')> {
 }
 
 export class YOLOInference {
-  private session: any = null;
-  private ort: typeof import('onnxruntime-web') | null = null;
+  private session: OrtInferenceSession | null = null;
+  private ort: OrtRuntime | null = null;
   private config: ModelConfig;
   private isLoading = false;
 
@@ -86,7 +110,7 @@ export class YOLOInference {
     const input = this.preprocess(imageData);
 
     // Run inference
-    const feeds: Record<string, any> = {
+    const feeds: Record<string, OrtTensor> = {
       images: input, // Adjust input name if your model uses different name
     };
 
@@ -108,7 +132,7 @@ export class YOLOInference {
     return { detections, inferenceTime };
   }
 
-  private preprocess(imageData: ImageData): any {
+  private preprocess(imageData: ImageData): OrtTensor {
     if (!this.ort) throw new Error('ONNX Runtime not loaded');
 
     const { inputSize } = this.config;
