@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: black;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior: none;
+}
+
+/* Full screen camera container */
+.camera-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Video element styling */
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Canvas overlay for bounding boxes */
+.detection-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Status indicator */
+.status-indicator {
+  position: fixed;
+  top: env(safe-area-inset-top, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.status-loading {
+  background-color: rgba(59, 130, 246, 0.8);
+  color: white;
+}
+
+.status-ready {
+  background-color: rgba(34, 197, 94, 0.8);
+  color: white;
+}
+
+.status-error {
+  background-color: rgba(239, 68, 68, 0.8);
+  color: white;
+}
+
+/* FPS counter */
+.fps-counter {
+  position: fixed;
+  bottom: env(safe-area-inset-bottom, 20px);
+  right: 20px;
+  padding: 6px 12px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: monospace;
+  z-index: 100;
+}

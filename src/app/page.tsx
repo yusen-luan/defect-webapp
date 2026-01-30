@@ -1,0 +1,11 @@
+'use client';
+
+import { CameraView } from '@/components/CameraView';
+
+export default function Home() {
+  return (
+    <main className="camera-container">
+      <CameraView />
+    </main>
+  );
+}

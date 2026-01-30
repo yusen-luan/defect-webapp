@@ -1,0 +1,10 @@
+# Place your YOLO ONNX model here
+# 
+# Expected file: model.onnx
+#
+# To export your YOLOv8 model to ONNX format:
+#   from ultralytics import YOLO
+#   model = YOLO('your_trained_model.pt')
+#   model.export(format='onnx', imgsz=640, simplify=True)
+#
+# Then copy the generated .onnx file here and rename it to model.onnx
