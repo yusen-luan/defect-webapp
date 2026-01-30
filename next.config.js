@@ -1,19 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack: (config, { isServer }) => {
-    // Fix for onnxruntime-web
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-      crypto: false,
-    };
-
-    // Exclude node-specific onnxruntime files from browser bundle
     if (!isServer) {
+      // Prevent Node.js-specific ONNX runtime files from being bundled
       config.resolve.alias = {
         ...config.resolve.alias,
         'onnxruntime-node': false,
+      };
+
+      // Ignore node-specific files
+      config.module.rules.push({
+        test: /ort\.node\.min\.mjs$/,
+        use: 'null-loader',
+      });
+
+      // Fallbacks for Node.js built-ins
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+        module: false,
       };
     }
 
